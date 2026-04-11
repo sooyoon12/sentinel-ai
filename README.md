@@ -62,8 +62,8 @@ AI 에이전트가 소프트웨어 취약점을 스스로 탐색(Fuzzing)하고
 
 ## 개발 로드맵
 
-  Week 1 ██████░░  Go MCP 서버 + 퍼징 엔진
-  Week 2 ░░░░░░░░  Python LangGraph 에이전트
+  Week 1 ████████  Go MCP 서버 + 퍼징 엔진
+  Week 2 ██░░░░░░  Python LangGraph 에이전트
   Week 3 ░░░░░░░░  n8n 워크플로우 연결
   Week 4 ░░░░░░░░  Next.js 대시보드
 
