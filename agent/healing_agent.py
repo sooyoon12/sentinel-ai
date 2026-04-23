@@ -3,8 +3,15 @@ from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 from analyzer import analyze_errors
 from patcher import generate_patch, validate_patch
+import os
+from pathlib import Path
 
-# ── 상태 정의 ──────────────────────────────────────────────
+
+def load_vuln_report():
+    path = os.environ.get("SENTINEL_VULN_REPORT")
+    if not path or not Path(path).exists():
+        return None
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 class HealingState(TypedDict):

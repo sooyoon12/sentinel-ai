@@ -3,8 +3,12 @@ import json
 import difflib
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
+import os
 
-llm = ChatOllama(model="llama3.2:3b", temperature=0)
+llm = ChatOllama(
+    model=os.environ.get("LLM_MODEL", "llama3.2:3b"),
+    base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
+)
 
 
 def generate_patch(source_code: str, analysis: dict) -> dict:

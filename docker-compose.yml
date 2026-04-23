@@ -1,0 +1,56 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sentinel-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - healer
+
+  # Python service wrapping both the Go MCP fuzzer binary and the
+  # LangGraph healing agent. n8n talks to it at http://healer:8001.
+  healer:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    image: sentinel-healer:latest
+    container_name: sentinel-healer
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL=llama3.2:3b
+      - FUZZER_BIN=/app/fuzzing-server
+      - AGENT_SCRIPT=/app/healing_agent.py
+      - PYTHONUNBUFFERED=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Hot-mount the agent code so edits don't require rebuild
+      - ./agent:/app:rw
+      # Go MCP fuzzer binary — executed via stdio JSON-RPC from server.py.
+      # NOTE: this must be a Linux binary matching the healer container's
+      # architecture. Rebuild if you see "Exec format error":
+      #   cd mcp-server && GOOS=linux GOARCH=arm64 go build -o ../bin/fuzzing-server ./cmd/
+      - ./bin/fuzzing-server:/app/fuzzing-server:ro
+      # Target server sources — writable: the healing agent rewrites
+      # main.go in place and creates main.go.bak.
+      # Mounted at BOTH paths so relative ("../target-server/...") and
+      # absolute ("/app/target-server/...") references from the agent both
+      # resolve to the host directory.
+      - ./target-server:/app/target-server:rw
+      - ./target-server:/target-server:rw
+
+volumes:
+  n8n_data:
