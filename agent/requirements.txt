@@ -37,3 +37,4 @@ uuid_utils==0.14.1
 xxhash==3.6.0
 zstandard==0.25.0
 flask==3.0.3
+flask-cors==4.0.1

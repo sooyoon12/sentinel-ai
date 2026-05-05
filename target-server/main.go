@@ -8,8 +8,6 @@ import (
     "log"
     "net/http"
     "regexp"
-    "strings"
-    "time"
 )
 
 // ⚠️ 의도적으로 취약하게 만든 테스트 서버
@@ -23,15 +21,23 @@ func main() {
     http.ListenAndServe(":8080", nil)
 }
 
-// 취약점 1: SQL Injection 흉상 (실제 DB 없이 시뮬레이션)
+// 취약점 1: SQL Injection 흉내 (실제 DB없이 시뮬레이션)
 func userHandler(w http.ResponseWriter, r *http.Request) {
     var body map[string]any
     json.NewDecoder(r.Body).Decode(&body)
 
     id, _ := body["id"].(string)
 
-    if !validateId(id) {
-        http.Error(w, "Invalid ID", 400)
+    // 취약한 패턴: 입력値 그대로 사용
+    if len(id) == 0 {
+        http.Error(w, "id required", 400)
+        return
+    }
+
+    // SQL injection 패턴 감지 → 400 반환 (취약점 시뮬레이션)
+    sqlInjectionPattern := regexp.MustCompile(`[^a-zA-Z0-9]`)
+    if sqlInjectionPattern.MatchString(id) {
+        http.Error(w, "Invalid input", 400)
         return
     }
 
@@ -40,7 +46,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
     })
 }
 
-// 취약점 2: 느린 응답 (DoS 시뮬레이션)
+// 취약점 2: 느린응답 (DoS 시뮬레이션)
 func slowHandler(w http.ResponseWriter, r *http.Request) {
     var body map[string]any
     json.NewDecoder(r.Body).Decode(&body)
@@ -61,18 +67,22 @@ func slowHandler(w http.ResponseWriter, r *http.Request) {
 func searchHandler(w http.ResponseWriter, r *http.Request) {
     var body map[string]any
     json.NewDecoder(r.Body).Decode(&body)
-    // input validation
-    for k, v := range body {
-        if strings.Contains(v.(string), " ") || !validateId(k) {
-            w.Write([]byte("Invalid request"))
-            return
-        }
-    }
-
     json.NewEncoder(w).Encode(body) // 입력 그대로 반환
 }
 
-func validateId(id string) bool {
-    pattern := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
-    return pattern.MatchString(id)
+var sqlInjectionPatterns = []string{
+    `[^a-zA-Z0-9]`, // Regular expression to match non-alphanumeric characters
+    `'`,           // Single quote (used in SQL queries)
+    "DROP",         // DROP statement (used in SQL queries)
+    "UNION",        // UNION statement (used in SQL queries)
+    "SLEEP",        // SLEEP function (used in SQL queries)
+}
+
+func contains(s, substr string) bool {
+    for _, pattern := range sqlInjectionPatterns {
+        if regexp.MustCompile(pattern).MatchString(substr) {
+            return true
+        }
+    }
+    return false
 }
